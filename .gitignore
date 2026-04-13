@@ -1,0 +1,3 @@
+node_modules/
+dist/
+site/src/generated/catalog.json
