@@ -49,23 +49,25 @@ jobs:
           script: |
             const marker = '<!-- vega-library-ci-summary -->';
 
-            const toLabel = (outcome, skippedLabel = 'skipped') => {
-              if (outcome === 'success') return 'successful';
-              if (outcome === 'failure') return 'failed';
-              if (outcome === 'cancelled') return 'cancelled';
-              return skippedLabel;
+            const toStatus = (outcome, skippedLabel = 'not run') => {
+              if (outcome === 'success') return { emoji: '✅', label: 'Successful' };
+              if (outcome === 'failure') return { emoji: '❌', label: 'Failed' };
+              if (outcome === 'cancelled') return { emoji: '⏹️', label: 'Cancelled' };
+              return { emoji: '⏭️', label: skippedLabel };
             };
 
-            const install = toLabel('${{ steps.install.outcome }}');
-            const catalog = toLabel('${{ steps.catalog.outcome }}', 'not run');
-            const site = toLabel('${{ steps.site.outcome }}', 'not run');
+            const install = toStatus('${{ steps.install.outcome }}');
+            const catalog = toStatus('${{ steps.catalog.outcome }}', 'Not run');
+            const site = toStatus('${{ steps.site.outcome }}', 'Not run');
 
             const body = `${marker}
-            CI summary for this pull request
+            ## CI Summary
 
-            - Dependency install: ${install}
-            - Vega specification validation: ${catalog}
-            - Site build: ${site}`;
+            | Check | Status |
+            | --- | --- |
+            | Dependency install | ${install.emoji} ${install.label} |
+            | Vega specification validation | ${catalog.emoji} ${catalog.label} |
+            | Site build | ${site.emoji} ${site.label} |`;
 
             const { owner, repo } = context.repo;
             const issue_number = context.issue.number;
