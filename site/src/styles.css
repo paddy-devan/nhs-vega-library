@@ -26,8 +26,7 @@ body {
 button,
 input,
 code,
-pre,
-summary {
+pre {
   font: inherit;
 }
 
@@ -129,12 +128,6 @@ pre {
 .repo-widget__body strong {
   font-size: 0.92rem;
   font-weight: 600;
-}
-
-.repo-widget__label,
-.repo-widget__meta {
-  color: var(--muted);
-  font-size: 0.8rem;
 }
 
 .repo-widget__stars {
@@ -279,45 +272,67 @@ pre {
   margin: 0 auto;
 }
 
-.inspect-sections {
-  display: grid;
-  gap: 8px;
+.inspector-panel {
   margin-top: 12px;
 }
 
-.inspect-section {
+.inspector-tabs {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-start;
+  margin-bottom: 8px;
+}
+
+.inspector-tab {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-muted);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.inspector-tab.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.inspector-content {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
 }
 
-.inspect-section summary {
-  list-style: none;
-  cursor: pointer;
-  padding: 12px 14px;
-  font-weight: 500;
+.inspector-content__actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 10px 0;
 }
 
-.inspect-section summary::-webkit-details-marker {
-  display: none;
-}
-
-.inspect-section summary::after {
-  content: "+";
-  float: right;
+.copy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-muted);
   color: var(--muted);
+  cursor: pointer;
 }
 
-.inspect-section[open] summary::after {
-  content: "−";
+.copy-button svg {
+  width: 15px;
+  height: 15px;
 }
 
-.inspect-section pre {
+.inspector-content pre {
   margin: 0;
   max-height: 420px;
   overflow: auto;
-  padding: 0 14px 14px;
-  border-top: 1px solid var(--line);
+  padding: 14px;
   background: var(--panel);
   color: var(--text);
   line-height: 1.5;
@@ -367,5 +382,9 @@ pre {
 
   .repo-widget {
     width: 100%;
+  }
+
+  .inspector-tabs {
+    flex-wrap: wrap;
   }
 }

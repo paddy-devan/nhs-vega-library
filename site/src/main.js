@@ -6,6 +6,7 @@ const state = {
   category: "All",
   query: "",
   slug: null,
+  inspectorTab: null,
 };
 
 let resizeFrame = null;
@@ -14,7 +15,7 @@ const repo = {
   fullName: "paddy-devan/vega-library",
   url: "https://github.com/paddy-devan/vega-library",
   starsBadge:
-    "https://img.shields.io/github/stars/paddy-devan/vega-library?style=flat&label=stars&color=171717",
+    "https://img.shields.io/github/stars/paddy-devan/vega-library?style=flat&label=&color=171717",
 };
 
 function cloneJson(value) {
@@ -156,6 +157,24 @@ function renderDetail(spec) {
 
   const sampleData = JSON.stringify(spec.sampleData, null, 2);
   const vegaSpec = JSON.stringify(spec.spec, null, 2);
+  const metadata = JSON.stringify({
+    title: spec.title,
+    slug: spec.slug,
+    category: spec.category,
+    description: spec.description,
+    tags: spec.tags,
+  }, null, 2);
+  const tabs = [
+    { id: "spec", label: "Spec JSON" },
+    { id: "sample", label: "Sample Data" },
+    { id: "meta", label: "Metadata" },
+  ];
+  const selectedTab = tabs.find((tab) => tab.id === state.inspectorTab) ?? null;
+  const tabContent = {
+    spec: vegaSpec,
+    sample: sampleData,
+    meta: metadata,
+  };
 
   return `
     <section class="detail-panel">
@@ -167,11 +186,9 @@ function renderDetail(spec) {
         </div>
         <div class="detail-stats">
           <div>
-            <span>Slug</span>
             <strong>${spec.slug}</strong>
           </div>
           <div>
-            <span>Rows</span>
             <strong>${spec.sampleSize}</strong>
           </div>
         </div>
@@ -179,26 +196,56 @@ function renderDetail(spec) {
       <div id="vega-preview" class="preview-shell">
         <div id="vega-preview-frame" class="preview-frame"></div>
       </div>
-      <div class="inspect-sections">
-        <details class="inspect-section">
-          <summary>Show metadata</summary>
-          <pre>${escapeHtml(JSON.stringify({
-            title: spec.title,
-            slug: spec.slug,
-            category: spec.category,
-            description: spec.description,
-            tags: spec.tags,
-          }, null, 2))}</pre>
-        </details>
-        <details class="inspect-section">
-          <summary>Show sample data</summary>
-          <pre>${escapeHtml(sampleData)}</pre>
-        </details>
-        <details class="inspect-section">
-          <summary>Show spec JSON</summary>
-          <pre>${escapeHtml(vegaSpec)}</pre>
-        </details>
-      </div>
+      <section class="inspector-panel">
+        <div class="inspector-tabs" role="tablist" aria-label="Specification details">
+          ${tabs
+            .map(
+              (tab) => `
+                <button
+                  class="inspector-tab${selectedTab?.id === tab.id ? " is-active" : ""}"
+                  type="button"
+                  role="tab"
+                  aria-selected="${selectedTab?.id === tab.id}"
+                  data-inspector-tab="${tab.id}"
+                >
+                  ${tab.label}
+                </button>
+              `,
+            )
+            .join("")}
+        </div>
+        ${
+          selectedTab
+            ? `
+              <div class="inspector-content">
+                ${
+                  selectedTab.id === "spec"
+                    ? `
+                      <div class="inspector-content__actions">
+                        <button
+                          class="copy-button"
+                          type="button"
+                          data-copy-spec="true"
+                          aria-label="Copy spec JSON to clipboard"
+                          title="Copy spec JSON"
+                        >
+                          <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+                            <path
+                              fill="currentColor"
+                              d="M3 2.75A1.75 1.75 0 0 1 4.75 1h5.5A1.75 1.75 0 0 1 12 2.75V4h.25A1.75 1.75 0 0 1 14 5.75v7.5A1.75 1.75 0 0 1 12.25 15h-5.5A1.75 1.75 0 0 1 5 13.25V12H4.75A1.75 1.75 0 0 1 3 10.25Zm2 8.5v-5.5A1.75 1.75 0 0 1 6.75 4H10.5V2.75a.25.25 0 0 0-.25-.25h-5.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25Zm1.5-5.5v7.5c0 .138.112.25.25.25h5.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25h-5.5a.25.25 0 0 0-.25.25Z"
+                            ></path>
+                          </svg>
+                        </button>
+                      </div>
+                    `
+                    : ""
+                }
+                <pre>${escapeHtml(tabContent[selectedTab.id])}</pre>
+              </div>
+            `
+            : ""
+        }
+      </section>
     </section>
   `;
 }
@@ -210,7 +257,7 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;");
 }
 
-function attachEvents(root) {
+function attachEvents(root, selectedSpec) {
   root.querySelector("#search-input")?.addEventListener("input", (event) => {
     state.query = event.target.value;
     render();
@@ -229,6 +276,18 @@ function attachEvents(root) {
       updateHash(state.slug);
       render();
     });
+  });
+
+  root.querySelectorAll("[data-inspector-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.inspectorTab =
+        state.inspectorTab === button.dataset.inspectorTab ? null : button.dataset.inspectorTab;
+      render();
+    });
+  });
+
+  root.querySelector("[data-copy-spec='true']")?.addEventListener("click", async () => {
+    await navigator.clipboard.writeText(JSON.stringify(selectedSpec.spec, null, 2));
   });
 }
 
@@ -276,9 +335,7 @@ function renderRepoWidget() {
         </svg>
       </span>
       <span class="repo-widget__body">
-        <span class="repo-widget__label">GitHub</span>
         <strong>${repo.name}</strong>
-        <span class="repo-widget__meta">${repo.fullName}</span>
       </span>
       <img
         class="repo-widget__stars"
@@ -313,7 +370,7 @@ async function render() {
     </div>
   `;
 
-  attachEvents(root);
+  attachEvents(root, selectedSpec);
   await renderPreview(selectedSpec);
 }
 
