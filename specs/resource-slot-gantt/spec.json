@@ -1,0 +1,278 @@
+{
+	"$schema": "https://vega.github.io/schema/vega/v5.json",
+
+	"data": [
+		{"name": "dataset"},
+		{
+			"name": "positions",
+			"source": "dataset",
+			"transform": [
+				{
+					"type": "formula",
+					"as": "startHour",
+					"expr": "hours(datum.slot_start_at) + minutes(datum.slot_start_at)/60"
+				},
+				{
+					"type": "formula",
+					"as": "endHour",
+					"expr": "hours(datum.slot_end_at) + minutes(datum.slot_end_at)/60"
+				},
+				{
+          "type": "formula",
+          "as": "midHour",
+          "expr": "(datum.startHour + datum.endHour) / 2"
+        }
+			]
+		},
+		{
+			"name": "extents",
+			"source": "positions",
+			"transform": [
+				{
+					"type": "aggregate",
+					"ops": ["min", "max"],
+					"fields": ["startHour", "endHour"],
+					"as": ["minStart", "maxEnd"]
+				}
+			]
+		}
+	],
+
+	"signals": [
+
+    /* calculate dynamix y-axis limits */
+    /* note: if no data, default to 0-24 hours */
+    {
+      "name": "rawMin",
+      "update": "data('extents').length ? data('extents')[0].minStart : 0" 
+    },
+    {
+      "name": "rawMax",
+      "update": "data('extents').length ? data('extents')[0].maxEnd   : 24"
+    },
+    {
+      "name": "domainMin",
+      "update": "floor(rawMin) - 1"
+    },
+    {
+      "name": "domainMax",
+      "update": "ceil(rawMax) + 1"
+    },
+
+    /* panning */
+    {
+      "name": "down",
+      "value": null,
+      "on": [
+        { "events": "pointerup, touchend", "update": "null" },
+        { "events": "pointerdown, touchstart", "update": "y()" }
+      ]
+    },
+    {
+      "name": "ycur",
+      "value": null,
+      "on": [
+        {
+          "events": "pointerdown, touchstart, touchend",
+          "update": "slice(yDom)"
+        }
+      ]
+    },
+    {
+      "name": "deltaY",
+      "value": 0,
+      "on": [
+        {
+          "events": [
+            {
+              "source": "window",
+              "type": "pointermove",
+              "consume": true,
+              "between": [
+                {
+                  "type": "pointerdown"
+                },
+                {
+                  "source": "window",
+                  "type": "pointerup" 
+                }
+              ],
+              "throttle": 16
+            },
+            {
+              "type": "touchmove",
+              "consume": true,
+              "filter": "event.touches.length === 1"
+            }
+          ],
+          "update": "down ? (y() - down) : 0"
+        }
+      ]
+    },
+
+    /* zooming */
+    {
+      "name": "zoomY",
+      "value": 1,
+      "on": [
+        {
+          "events": "wheel!",
+          "force": true,
+          "update": "pow(1.001, event.deltaY * pow(16, event.deltaMode))"
+        }
+      ]
+    },
+    {
+      "name": "anchorY",
+      "value": 0,
+      "on": [
+        { "events": "wheel", "update": "invert('yscale', clamp(y(), 0, height))" }
+      ]
+    },
+
+    /* y-domain that reacts to pan and zooming */
+    {
+      "name": "yDom",
+      "value": [0, 24],
+      "on": [
+        {
+          "events": [
+            {"signal": "domainMin"},
+            {"signal": "domainMax"}
+          ],
+          "update": "[domainMin, domainMax]"
+        },
+        {
+          "events": {"signal": "deltaY"},
+          "update": "[ max(domainMin, ycur[0] - span(ycur) * deltaY / height), min(domainMax, ycur[1] - span(ycur) * deltaY / height) ]"
+        },
+        {
+          "events": "wheel!",
+          "update": "[ max(domainMin, anchorY + (yDom[0] - anchorY) * zoomY), min(domainMax, anchorY + (yDom[1] - anchorY) * zoomY) ]"
+        }
+      ]
+    },
+
+    /* adaptive y-axis ticks */
+    {
+      "name": "tickMinPx",
+      "value": 70
+    },
+    {
+      "name": "pxPerHour",
+      "update": "height / (yDom[1] - yDom[0])"
+    },
+    {
+      "name": "stepH",
+      "update": "pxPerHour < tickMinPx ? 1 : pxPerHour*0.5 < tickMinPx ? 0.5 : pxPerHour*0.25 < tickMinPx ? 0.25 : pxPerHour*(1/6) < tickMinPx ? 1/6 : 1/12"
+    }
+  ]
+  ,
+
+	"scales": [
+		{
+			"name": "xscale",
+			"type": "band",
+			"domain": {"data": "positions", "field": "resource_id"},
+			"range": "width",
+			"padding": 0.15
+		},
+		{
+			"name": "yscale",
+			"type": "linear",
+			"domain": {"signal": "yDom"},
+			"range": [ 0, {"signal": "height"} ],
+			"zero": false
+		}
+	],
+
+	"axes": [
+		{
+      "orient": "top",
+      "scale": "xscale"
+    },
+		{
+			"orient": "left",
+			"scale": "yscale",
+			"values": {
+				"signal": "sequence(ceil(yDom[0]/stepH)*stepH, floor(yDom[1]/stepH)*stepH + stepH, stepH)"
+			},
+			"tickCount": 25,
+			"encode": {
+				"labels": {
+					"update": {
+						"text": {
+							"signal": "format(floor((round(datum.value*60 - 1e-6))/60), '02') + ':' + format((round(datum.value*60 - 1e-6)) % 60, '02')"
+						}
+					}
+				}
+			}
+		}
+	],
+
+	"marks": [
+		{
+      "name": "slot rectangles",
+      "type": "rect",
+      "clip": true,
+      "from": {"data": "positions"},
+      "encode": {
+        "update": {
+          "x": {
+            "scale": "xscale",
+            "field": "resource_id"
+          },
+          "width": {
+            "scale": "xscale",
+            "band": 1
+          },
+          "y": {
+            "scale": "yscale",
+            "field": "startHour"
+          },
+          "y2": {
+            "scale": "yscale",
+            "field": "endHour"
+          },
+          "fill": {"value": "#4682b4"},
+          "stroke": {"value": "white"},
+          "cornerRadius": {"value": 2},
+          "tooltip": {
+            "signal": "{'Resource': datum.resource_id, 'Slot': datum.slot_name, 'Start': timeFormat(datum.slot_start_at, '%H:%M'), 'End': timeFormat(datum.slot_end_at, '%H:%M')}"
+          }
+        }
+      }
+    },
+		{
+			"name": "slot name labels",
+      "type": "text",
+			"clip": true,
+			"from": {"data": "positions"},
+			"encode": {
+				"update": {
+					"x": {
+            "scale": "xscale",
+            "field": "resource_id",
+            "band": 0.5
+          },
+					"y": {
+            "scale": "yscale",
+            "field": "midHour"
+          },
+					"align": {"value": "center"},
+					"baseline": {"value": "middle"},
+					"fill": {"value": "white"},
+					"text": {"field": "slot_name"},
+					"fontSize": {"value": 11},
+          "limit": {"signal": "bandwidth('xscale') - 6"},
+          "ellipsis": {"value": "…"}
+				}
+			}
+		}
+	],
+
+	"config": {
+    "axis": {"grid": true},
+    "view": {"stroke": null}
+  }
+}

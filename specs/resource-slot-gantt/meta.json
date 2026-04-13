@@ -1,0 +1,6 @@
+{
+  "title": "Resource Slot Gantt",
+  "category": "Scheduling",
+  "description": "Shows appointment slots per resource across a day",
+  "tags": ["gantt", "appointments", "capacity"]
+}
