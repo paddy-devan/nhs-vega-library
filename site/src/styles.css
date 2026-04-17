@@ -222,8 +222,9 @@ pre {
 }
 
 .spec-card.is-selected {
-  border-color: var(--line-strong);
-  background: var(--panel-muted);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .detail-panel,
