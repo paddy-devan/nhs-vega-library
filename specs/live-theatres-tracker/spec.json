@@ -38,6 +38,16 @@
         },
         {
           "type": "formula",
+          "expr": "timeFormat(datum.session_start, '%d/%m/%y %H:%M')",
+          "as": "SessionStartString"
+        },
+        {
+          "type": "formula",
+          "expr": "timeFormat(datum.session_end, '%d/%m/%y %H:%M')",
+          "as": "SessionEndString"
+        },
+        {
+          "type": "formula",
           "expr": "datetime(year(datum.case_start != null ? datum.case_start : datum.session_start), month(datum.case_start != null ? datum.case_start : datum.session_start), date(datum.case_start != null ? datum.case_start : datum.session_start))",
           "as": "DatasetDate"
         },
@@ -71,12 +81,18 @@
           "type": "aggregate",
           "groupby": [
             "session_theatre",
+            "session_key",
             "SessionStartHour",
             "SessionEndHour"
           ],
-          "fields": ["SessionStartHour", "SessionEndHour"],
-          "ops": ["min", "max"],
-          "as": ["MinStartHour", "MaxEndHour"]
+          "fields": [
+            "SessionStartHour",
+            "SessionEndHour",
+            "SessionStartString",
+            "SessionEndString"
+          ],
+          "ops": ["min", "max", "min", "min"],
+          "as": ["MinStartHour", "MaxEndHour", "SessionStartString", "SessionEndString"]
         }
       ]
     },
@@ -159,9 +175,10 @@
     { "name": "colourCompleted", "value": "#10E067" },
     { "name": "colourOngoing", "value": "#FFB000" },
 
+    { "name": "caseBandFraction", "value": 0.78 },
     {
-      "name": "currentHour",
-      "update": "hours(now()) + minutes(now())/60"
+      "name": "caseYOffset",
+      "update": "(1 - caseBandFraction) / 2"
     },
 
     {
@@ -187,23 +204,12 @@
     {
       "name": "showCurrentLine",
       "update": "(year(datasetDate) === year(lastRefreshDate)) && (month(datasetDate) === month(lastRefreshDate)) && (date(datasetDate) === date(lastRefreshDate))"
-    },
-
-    {
-      "name": "tooltipContent",
-      "on": [
-        {
-          "events": "rect:mouseover",
-          "update": "{'Status': datum.case_status, 'Start': datum.CaseStartString, 'End': datum.CaseEndString, 'Procedure': datum.case_procedure}"
-        },
-        { "events": "rect:mouseout", "update": "{}" }
-      ]
     }
   ],
 
   "marks": [
     {
-      "description": "Red session bands",
+      "description": "Session bands",
       "type": "rect",
       "from": { "data": "sessionBands" },
       "encode": {
@@ -225,7 +231,14 @@
             "field": "MaxEndHour"
           },
           "fill": { "value": "#ffeeed" },
-          "opacity": { "value": 0.5 }
+          "opacity": { "value": 0.5 },
+          "stroke": { "value": "#fcc6c0" },
+          "strokeWidth": { "value": 1 }
+        },
+        "update": {
+          "tooltip": {
+            "signal": "{'Session': datum.session_key == null ? '-' : datum.session_key, 'Start': datum.SessionStartString == null ? '-' : datum.SessionStartString, 'End': datum.SessionEndString == null ? '-' : datum.SessionEndString}"
+          }
         }
       }
     },
@@ -238,11 +251,12 @@
         "enter": {
           "y": {
             "scale": "yscale",
-            "field": "session_theatre"
+            "field": "session_theatre",
+            "band": { "signal": "caseYOffset" }
           },
           "height": {
             "scale": "yscale",
-            "band": 1
+            "band": { "signal": "caseBandFraction" }
           },
           "x": {
             "scale": "xscale",
@@ -266,37 +280,9 @@
           "fillOpacity": { "value": 0.55 }
         },
         "update": {
-          "tooltip": { "signal": "tooltipContent" }
-        }
-      }
-    },
-
-    {
-      "description": "Session start dotted line",
-      "type": "rule",
-      "from": { "data": "sessionBands" },
-      "encode": {
-        "enter": {
-          "x": { "scale": "xscale", "field": "MinStartHour" },
-          "y": { "scale": "yscale", "field": "session_theatre" },
-          "y2": { "scale": "yscale", "field": "session_theatre", "offset": { "scale": "yscale", "band": 1 } },
-          "stroke": { "value": "red" },
-          "strokeDash": { "value": [4, 2] }
-        }
-      }
-    },
-
-    {
-      "description": "Session end dotted line",
-      "type": "rule",
-      "from": { "data": "sessionBands" },
-      "encode": {
-        "enter": {
-          "x": { "scale": "xscale", "field": "MaxEndHour" },
-          "y": { "scale": "yscale", "field": "session_theatre" },
-          "y2": { "scale": "yscale", "field": "session_theatre", "offset": { "scale": "yscale", "band": 1 } },
-          "stroke": { "value": "red" },
-          "strokeDash": { "value": [4, 2] }
+          "tooltip": {
+            "signal": "{'Status': datum.case_status == null ? '-' : datum.case_status, 'Start': datum.CaseStartString == null ? '-' : datum.CaseStartString, 'End': datum.CaseEndString == null ? '-' : datum.CaseEndString, 'Procedure': datum.case_procedure == null ? '-' : datum.case_procedure}"
+          }
         }
       }
     },
