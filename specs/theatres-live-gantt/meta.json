@@ -1,0 +1,28 @@
+{
+  "title": "Theatres Live Gantt",
+  "category": "Scheduling",
+  "description": "Shows operating theatre activity by theatre and session.",
+  "tags": ["gantt", "appointments", "theatres", "operations"],
+  "inputs": [
+    {
+      "name": "resource_id",
+      "type": "string",
+      "description": "Resource, room, clinician, or other entity shown as a column."
+    },
+    {
+      "name": "slot_name",
+      "type": "string",
+      "description": "Display label shown inside each slot and in the slot tooltip."
+    },
+    {
+      "name": "slot_start_at",
+      "type": "datetime",
+      "description": "Start timestamp for the slot."
+    },
+    {
+      "name": "slot_end_at",
+      "type": "datetime",
+      "description": "End timestamp for the slot."
+    }
+  ]
+}

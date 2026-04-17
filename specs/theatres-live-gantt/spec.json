@@ -1,0 +1,329 @@
+{
+  "$schema": "https://vega.github.io/schema/vega/v5.json",
+  "autosize": { "type": "fit" },
+
+  "data": [
+    {
+      "name": "dataset",
+      "transform": [
+        {
+          "type": "formula",
+          "expr": "datum.case_start == null ? null : datum.case_start < datetime(year(datum.case_start), month(datum.case_start), date(datum.case_start)) ? 0 : datum.case_start > datetime(year(datum.case_start), month(datum.case_start), date(datum.case_start)+1) ? 24 : hours(datum.case_start) + minutes(datum.case_start) / 60",
+          "as": "CaseStartHour"
+        },
+        {
+          "type": "formula",
+          "expr": "datum.case_end == null ? null : datum.case_end < datetime(year(datum.case_start), month(datum.case_start), date(datum.case_start)) ? 0 : datum.case_end >= datetime(year(datum.case_start), month(datum.case_start), date(datum.case_start)+1) ? 24 : hours(datum.case_end) + minutes(datum.case_end) / 60",
+          "as": "CaseEndHour"
+        },
+        {
+          "type": "formula",
+          "expr": "hours(datum.session_start) + minutes(datum.session_start) / 60",
+          "as": "SessionStartHour"
+        },
+        {
+          "type": "formula",
+          "expr": "hours(datum.session_start) == 0 ? 24 : hours(datum.session_end) + minutes(datum.session_end) / 60",
+          "as": "SessionEndHour"
+        },
+        {
+          "type": "formula",
+          "expr": "datum.case_start == null ? null : timeFormat(datum.case_start, '%d/%m/%y %H:%M')",
+          "as": "CaseStartString"
+        },
+        {
+          "type": "formula",
+          "expr": "datum.case_end == null ? null : timeFormat(datum.case_end, '%d/%m/%y %H:%M')",
+          "as": "CaseEndString"
+        },
+        {
+          "type": "formula",
+          "expr": "datetime(year(datum.case_start != null ? datum.case_start : datum.session_start), month(datum.case_start != null ? datum.case_start : datum.session_start), date(datum.case_start != null ? datum.case_start : datum.session_start))",
+          "as": "DatasetDate"
+        },
+        {
+          "type": "collect",
+          "sort": {
+            "field": "CaseStartHour",
+            "order": "ascending"
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "casesWithStart",
+      "source": "dataset",
+      "transform": [
+        { "type": "filter", "expr": "datum.case_start != null" },
+        {
+          "type": "collect",
+          "sort": { "field": "CaseStartHour", "order": "ascending" }
+        }
+      ]
+    },
+
+    {
+      "name": "sessionBands",
+      "source": "dataset",
+      "transform": [
+        {
+          "type": "aggregate",
+          "groupby": [
+            "session_theatre",
+            "SessionStartHour",
+            "SessionEndHour"
+          ],
+          "fields": ["SessionStartHour", "SessionEndHour"],
+          "ops": ["min", "max"],
+          "as": ["MinStartHour", "MaxEndHour"]
+        }
+      ]
+    },
+
+    {
+      "name": "refreshMeta",
+      "source": "dataset",
+      "transform": [
+        {
+          "type": "aggregate",
+          "fields": ["last_refresh_dttm"],
+          "ops": ["max"],
+          "as": ["LastRefreshDTTM"]
+        }
+      ]
+    },
+
+    {
+      "name": "dataMeta",
+      "source": "dataset",
+      "transform": [
+        {
+          "type": "aggregate",
+          "fields": ["DatasetDate"],
+          "ops": ["max"],
+          "as": ["MaxDate"]
+        }
+      ]
+    }
+  ],
+
+  "scales": [
+    {
+      "name": "xscale",
+      "type": "linear",
+      "range": "width",
+      "domain": {
+        "data": "dataset",
+        "fields": [
+          "SessionStartHour",
+          "CaseStartHour",
+          "CaseEndHour",
+          "SessionEndHour"
+        ]
+      },
+      "zero": false,
+      "nice": true
+    },
+    {
+      "name": "yscale",
+      "type": "band",
+      "range": "height",
+      "domain": {
+        "data": "dataset",
+        "field": "session_theatre",
+        "sort": true
+      },
+      "padding": 0.15
+    }
+  ],
+
+  "axes": [
+    {
+      "orient": "bottom",
+      "scale": "xscale",
+      "grid": true,
+      "gridColor": "#d3d3d3",
+      "gridOpacity": 0.7,
+      "ticks": true,
+      "tickCount": 14,
+      "labelPadding": 4
+    },
+    {
+      "orient": "left",
+      "scale": "yscale"
+    }
+  ],
+
+  "signals": [
+    { "name": "colourCompleted", "value": "#10E067" },
+    { "name": "colourOngoing", "value": "#FFB000" },
+
+    {
+      "name": "currentHour",
+      "update": "hours(now()) + minutes(now())/60"
+    },
+
+    {
+      "name": "datasetDate",
+      "update": "datetime(year(data('dataMeta')[0].MaxDate), month(data('dataMeta')[0].MaxDate), day(data('dataMeta')[0].MaxDate))"
+    },
+
+    {
+      "name": "lastRefreshDTTM",
+      "update": "data('refreshMeta')[0].LastRefreshDTTM"
+    },
+
+    {
+      "name": "lastRefreshHour",
+      "update": "hours(lastRefreshDTTM) + minutes(lastRefreshDTTM) / 60"
+    },
+
+    {
+      "name": "lastRefreshDate",
+      "update": "datetime(year(lastRefreshDTTM), month(lastRefreshDTTM), day(lastRefreshDTTM))"
+    },
+
+    {
+      "name": "showCurrentLine",
+      "update": "(year(datasetDate) === year(lastRefreshDate)) && (month(datasetDate) === month(lastRefreshDate)) && (date(datasetDate) === date(lastRefreshDate))"
+    },
+
+    {
+      "name": "tooltipContent",
+      "on": [
+        {
+          "events": "rect:mouseover",
+          "update": "{'Status': datum.case_status, 'Start': datum.CaseStartString, 'End': datum.CaseEndString, 'Procedure': datum.case_procedure, 'DQ Issues': datum.case_dq_issues}"
+        },
+        { "events": "rect:mouseout", "update": "{}" }
+      ]
+    }
+  ],
+
+  "marks": [
+    {
+      "description": "Red session bands",
+      "type": "rect",
+      "from": { "data": "sessionBands" },
+      "encode": {
+        "enter": {
+          "y": {
+            "scale": "yscale",
+            "field": "session_theatre"
+          },
+          "height": {
+            "scale": "yscale",
+            "band": 1
+          },
+          "x": {
+            "scale": "xscale",
+            "field": "MinStartHour"
+          },
+          "x2": {
+            "scale": "xscale",
+            "field": "MaxEndHour"
+          },
+          "fill": { "value": "#ffeeed" },
+          "opacity": { "value": 0.5 }
+        }
+      }
+    },
+
+    {
+      "description": "Case rectangles",
+      "type": "rect",
+      "from": { "data": "casesWithStart" },
+      "encode": {
+        "enter": {
+          "y": {
+            "scale": "yscale",
+            "field": "session_theatre"
+          },
+          "height": {
+            "scale": "yscale",
+            "band": 1
+          },
+          "x": {
+            "scale": "xscale",
+            "signal": "datum.CaseStartHour"
+          },
+          "x2": {
+            "scale": "xscale",
+            "signal": "datum.case_end != null ? datum.CaseEndHour : showCurrentLine ? lastRefreshHour : 24"
+          },
+          "cornerRadiusTopLeft": { "value": 4 },
+          "cornerRadiusTopRight": {
+            "signal": "datum.case_status == 'Complete' ? 4 : 0"
+          },
+          "cornerRadiusBottomRight": {
+            "signal": "datum.case_status == 'Complete' ? 4 : 0"
+          },
+          "cornerRadiusBottomLeft": { "value": 4 },
+          "stroke": {
+            "value": "red"
+          },
+          "strokeWidth": {
+            "signal": "datum.case_dq_issues != null && datum.case_status == 'Complete' ? 1 : 0"
+          },
+          "fill": {
+            "signal": "datum.case_status == 'Complete' ? colourCompleted : colourOngoing"
+          },
+          "fillOpacity": { "value": 0.55 }
+        },
+        "update": {
+          "tooltip": { "signal": "tooltipContent" }
+        }
+      }
+    },
+
+    {
+      "description": "Session start dotted line",
+      "type": "rule",
+      "from": { "data": "sessionBands" },
+      "encode": {
+        "enter": {
+          "x": { "scale": "xscale", "field": "MinStartHour" },
+          "y": { "scale": "yscale", "field": "session_theatre" },
+          "y2": { "scale": "yscale", "field": "session_theatre", "offset": { "scale": "yscale", "band": 1 } },
+          "stroke": { "value": "red" },
+          "strokeDash": { "value": [4, 2] }
+        }
+      }
+    },
+
+    {
+      "description": "Session end dotted line",
+      "type": "rule",
+      "from": { "data": "sessionBands" },
+      "encode": {
+        "enter": {
+          "x": { "scale": "xscale", "field": "MaxEndHour" },
+          "y": { "scale": "yscale", "field": "session_theatre" },
+          "y2": { "scale": "yscale", "field": "session_theatre", "offset": { "scale": "yscale", "band": 1 } },
+          "stroke": { "value": "red" },
+          "strokeDash": { "value": [4, 2] }
+        }
+      }
+    },
+
+    {
+      "description": "Current time marker",
+      "type": "rule",
+      "encode": {
+        "enter": {
+          "x": {
+            "scale": "xscale",
+            "signal": "lastRefreshHour"
+          },
+          "y": { "value": 0 },
+          "y2": { "signal": "height" },
+          "stroke": { "value": "#054ffa" },
+          "strokeWidth": { "value": 2.5 },
+          "strokeCap": { "value": "square" },
+          "opacity": { "signal": "showCurrentLine ? 1 : 0" }
+        }
+      }
+    }
+  ]
+}
