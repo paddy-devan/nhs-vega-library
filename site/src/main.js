@@ -26,10 +26,32 @@ function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function isIsoDateTimeString(value) {
+  return (
+    typeof value === "string" &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:?\d{2})?$/.test(value)
+  );
+}
+
+function parseSampleDataDates(sampleData) {
+  return sampleData.map((row) =>
+    Object.fromEntries(
+      Object.entries(row).map(([key, value]) => {
+        if (!isIsoDateTimeString(value)) {
+          return [key, value];
+        }
+
+        const parsedDate = new Date(value);
+        return Number.isNaN(parsedDate.valueOf()) ? [key, value] : [key, parsedDate];
+      }),
+    ),
+  );
+}
+
 function withDataset(spec, sampleData) {
   const nextSpec = cloneJson(spec);
   const dataset = nextSpec.data.find((entry) => entry && entry.name === "dataset");
-  dataset.values = sampleData;
+  dataset.values = parseSampleDataDates(sampleData);
   return nextSpec;
 }
 
@@ -367,9 +389,9 @@ async function renderPreview(selectedSpec) {
     return;
   }
 
-  const previewSpec = withPreviewDimensions(
-    withDataset(selectedSpec.spec, selectedSpec.sampleData),
-    previewShell,
+  const previewSpec = withDataset(
+    withPreviewDimensions(selectedSpec.spec, previewShell),
+    selectedSpec.sampleData,
   );
 
   await embed(previewFrame, previewSpec, {
