@@ -194,7 +194,7 @@
       "on": [
         {
           "events": "rect:mouseover",
-          "update": "{'Status': datum.case_status, 'Start': datum.CaseStartString, 'End': datum.CaseEndString, 'Procedure': datum.case_procedure, 'DQ Issues': datum.case_dq_issues}"
+          "update": "{'Status': datum.case_status, 'Start': datum.CaseStartString, 'End': datum.CaseEndString, 'Procedure': datum.case_procedure}"
         },
         { "events": "rect:mouseout", "update": "{}" }
       ]
@@ -260,12 +260,6 @@
             "signal": "datum.case_status == 'Complete' ? 4 : 0"
           },
           "cornerRadiusBottomLeft": { "value": 4 },
-          "stroke": {
-            "value": "red"
-          },
-          "strokeWidth": {
-            "signal": "datum.case_dq_issues != null && datum.case_status == 'Complete' ? 1 : 0"
-          },
           "fill": {
             "signal": "datum.case_status == 'Complete' ? colourCompleted : colourOngoing"
           },
