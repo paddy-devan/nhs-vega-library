@@ -502,28 +502,6 @@ pre {
     grid-template-columns: 1fr;
   }
 
-  .spec-list {
-    position: static;
-  }
-}
-
-@media (max-width: 720px) {
-  .page-shell {
-    width: min(100% - 20px, 1280px);
-    padding-top: 16px;
-  }
-
-  .site-header,
-  .filters-panel,
-  .detail-panel__header {
-    flex-direction: column;
-    align-items: start;
-  }
-
-  .filters-panel {
-    align-items: stretch;
-  }
-
   .spec-selector {
     display: grid;
     overflow: hidden;
@@ -622,6 +600,24 @@ pre {
 
   .spec-list--empty {
     display: grid;
+  }
+}
+
+@media (max-width: 720px) {
+  .page-shell {
+    width: min(100% - 20px, 1280px);
+    padding-top: 16px;
+  }
+
+  .site-header,
+  .filters-panel,
+  .detail-panel__header {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .filters-panel {
+    align-items: stretch;
   }
 
   .spec-card__header {
