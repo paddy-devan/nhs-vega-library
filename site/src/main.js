@@ -6,6 +6,7 @@ const state = {
   query: "",
   selectedTags: [],
   tagFiltersExpanded: false,
+  specListExpanded: false,
   slug: null,
   inspectorTab: null,
 };
@@ -19,8 +20,7 @@ const repo = {
   name: "nhs-vega-library",
   fullName: "paddy-devan/nhs-vega-library",
   url: "https://github.com/paddy-devan/nhs-vega-library",
-  starsBadge:
-    "https://img.shields.io/github/stars/paddy-devan/nhs-vega-library?style=flat&label=&color=171717",
+  stars: null,
 };
 
 function cloneJson(value) {
@@ -199,9 +199,26 @@ function renderInactiveTagFilter(tag) {
 }
 
 function renderSpecList(specs, selectedSpec) {
+  const selectedTitle = selectedSpec?.title ?? "No visual selected";
+
   if (specs.length === 0) {
     return `
-      <section class="spec-list">
+      <section class="spec-selector">
+        <button
+          class="spec-selector__toggle"
+          type="button"
+          data-toggle-spec-list="true"
+          aria-controls="mobile-spec-list"
+          aria-expanded="${state.specListExpanded}"
+          disabled
+        >
+          <span class="spec-selector__summary">
+            <span class="spec-selector__label">Visual selector</span>
+            <strong>No matching visuals</strong>
+          </span>
+        </button>
+      </section>
+      <section id="spec-list" class="spec-list spec-list--empty">
         <div class="empty-state">
           <h2>No visuals match the current filters.</h2>
           <p>Try a different search term or tag.</p>
@@ -227,7 +244,37 @@ function renderSpecList(specs, selectedSpec) {
     )
     .join("");
 
-  return `<section class="spec-list">${cards}</section>`;
+  return `
+    <section class="spec-selector">
+      <button
+        class="spec-selector__toggle"
+        type="button"
+        data-toggle-spec-list="true"
+        aria-controls="mobile-spec-list"
+        aria-expanded="${state.specListExpanded}"
+      >
+        <span class="spec-selector__summary">
+          <span class="spec-selector__label">Visual selector</span>
+          <strong>${state.specListExpanded ? "Choose a visual" : escapeHtml(selectedTitle)}</strong>
+        </span>
+        <span class="spec-selector__action">
+          ${state.specListExpanded ? "Hide" : "Change"}
+        </span>
+      </button>
+      ${
+        state.specListExpanded
+          ? `
+            <div id="mobile-spec-list" class="spec-selector__list">
+              ${cards}
+            </div>
+          `
+          : ""
+      }
+    </section>
+    <section id="spec-list" class="spec-list">
+      ${cards}
+    </section>
+  `;
 }
 
 function renderSampleDataTable(rows) {
@@ -484,6 +531,13 @@ async function renderPreview(selectedSpec) {
   });
 }
 
+function renderStarDigits(value) {
+  return String(value ?? 0)
+    .split("")
+    .map((digit) => `<span class="repo-widget__stars-digit">${escapeHtml(digit)}</span>`)
+    .join("");
+}
+
 function renderRepoWidget() {
   return `
     <a
@@ -511,13 +565,44 @@ function renderRepoWidget() {
       <span class="repo-widget__body">
         <strong>${repo.name}</strong>
       </span>
-      <img
-        class="repo-widget__stars"
-        src="${repo.starsBadge}"
-        alt="GitHub stars for ${repo.fullName}"
-      />
+      <span class="repo-widget__stars" aria-label="GitHub stars for ${repo.fullName}">
+        <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+          <path
+            fill="currentColor"
+            d="M8 .75 10.22 5.25l4.96.72-3.59 3.5.85 4.94L8 12.08l-4.44 2.33.85-4.94-3.59-3.5 4.96-.72L8 .75Z"
+          ></path>
+        </svg>
+        <span class="repo-widget__stars-count" aria-hidden="true">${renderStarDigits(repo.stars)}</span>
+      </span>
     </a>
   `;
+}
+
+function updateRepoStars(stars) {
+  repo.stars = stars;
+  const counter = document.querySelector(".repo-widget__stars-count");
+  if (counter) {
+    counter.innerHTML = renderStarDigits(repo.stars);
+  }
+}
+
+async function loadRepoStars() {
+  try {
+    const response = await fetch(`https://api.github.com/repos/${repo.fullName}`, {
+      headers: { Accept: "application/vnd.github+json" },
+    });
+
+    if (!response.ok) {
+      return;
+    }
+
+    const data = await response.json();
+    if (Number.isFinite(data.stargazers_count)) {
+      updateRepoStars(data.stargazers_count);
+    }
+  } catch {
+    // Keep the fallback counter if GitHub cannot be reached.
+  }
 }
 
 function mountApp() {
@@ -585,6 +670,13 @@ function attachEvents(root) {
     const tagToggle = event.target.closest("[data-toggle-tags]");
     if (tagToggle) {
       state.tagFiltersExpanded = !state.tagFiltersExpanded;
+      updateView();
+      return;
+    }
+
+    const specListToggle = event.target.closest("[data-toggle-spec-list]");
+    if (specListToggle) {
+      state.specListExpanded = !state.specListExpanded;
       updateView();
       return;
     }
@@ -673,4 +765,5 @@ window.addEventListener("resize", () => {
 
 readHashSlug();
 mountApp();
+loadRepoStars();
 updateView();
