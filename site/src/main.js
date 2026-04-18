@@ -5,6 +5,7 @@ import "./styles.css";
 const state = {
   query: "",
   selectedTags: [],
+  tagFiltersExpanded: false,
   slug: null,
   inspectorTab: null,
 };
@@ -114,15 +115,37 @@ function updateHash(slug) {
 function renderFilters() {
   return `
     <section class="filters-panel">
-      <label class="search-field">
-        <input
-          id="search-input"
-          type="search"
-          placeholder="Search visuals"
-          value="${escapeHtml(state.query)}"
-        />
-      </label>
-      <div class="filter-row" aria-label="Filter by tags">
+      <div class="search-row">
+        <label class="search-field">
+          <input
+            id="search-input"
+            type="search"
+            placeholder="Search visuals"
+            value="${escapeHtml(state.query)}"
+          />
+        </label>
+        <button
+          class="filter-toggle${state.tagFiltersExpanded ? " is-expanded" : ""}"
+          type="button"
+          data-toggle-tags="true"
+          aria-controls="tag-filter-row"
+          aria-expanded="${state.tagFiltersExpanded}"
+          aria-label="${state.tagFiltersExpanded ? "Hide tag filters" : "Show tag filters"}"
+          title="${state.tagFiltersExpanded ? "Hide tag filters" : "Show tag filters"}"
+        >
+          <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M4.22 5.97a.75.75 0 0 1 1.06 0L8 8.69l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.03a.75.75 0 0 1 0-1.06Z"
+            ></path>
+          </svg>
+        </button>
+      </div>
+      <div
+        id="tag-filter-row"
+        class="filter-row${state.tagFiltersExpanded ? "" : " is-collapsed"}"
+        aria-label="Filter by tags"
+      >
         ${renderTagFilterRow()}
       </div>
     </section>
@@ -530,6 +553,21 @@ function updateFiltersUI() {
   const filterRow = document.querySelector(".filter-row");
   if (filterRow) {
     filterRow.innerHTML = renderTagFilterRow();
+    filterRow.classList.toggle("is-collapsed", !state.tagFiltersExpanded);
+  }
+
+  const filterToggle = document.querySelector("[data-toggle-tags]");
+  if (filterToggle) {
+    filterToggle.classList.toggle("is-expanded", state.tagFiltersExpanded);
+    filterToggle.setAttribute("aria-expanded", String(state.tagFiltersExpanded));
+    filterToggle.setAttribute(
+      "aria-label",
+      state.tagFiltersExpanded ? "Hide tag filters" : "Show tag filters",
+    );
+    filterToggle.setAttribute(
+      "title",
+      state.tagFiltersExpanded ? "Hide tag filters" : "Show tag filters",
+    );
   }
 }
 
@@ -544,6 +582,13 @@ function attachEvents(root) {
   });
 
   root.addEventListener("click", async (event) => {
+    const tagToggle = event.target.closest("[data-toggle-tags]");
+    if (tagToggle) {
+      state.tagFiltersExpanded = !state.tagFiltersExpanded;
+      updateView();
+      return;
+    }
+
     const tagButton = event.target.closest("[data-tag]");
     if (tagButton) {
       const tag = tagButton.dataset.tag;

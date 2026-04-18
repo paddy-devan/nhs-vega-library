@@ -147,8 +147,15 @@ pre {
   border-radius: 8px;
 }
 
+.search-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .search-field {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
 }
 
 .search-field input {
@@ -161,11 +168,45 @@ pre {
   color: var(--text);
 }
 
+.filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-muted);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.filter-toggle svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 160ms ease;
+}
+
+.filter-toggle.is-expanded {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.filter-toggle.is-expanded svg {
+  transform: rotate(180deg);
+}
+
 .filter-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+.filter-row.is-collapsed {
+  display: none;
 }
 
 .filter-chip {
