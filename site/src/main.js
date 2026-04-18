@@ -6,6 +6,7 @@ const state = {
   query: "",
   selectedTags: [],
   tagFiltersExpanded: false,
+  specListExpanded: false,
   slug: null,
   inspectorTab: null,
 };
@@ -199,9 +200,26 @@ function renderInactiveTagFilter(tag) {
 }
 
 function renderSpecList(specs, selectedSpec) {
+  const selectedTitle = selectedSpec?.title ?? "No visual selected";
+
   if (specs.length === 0) {
     return `
-      <section class="spec-list">
+      <section class="spec-selector">
+        <button
+          class="spec-selector__toggle"
+          type="button"
+          data-toggle-spec-list="true"
+          aria-controls="mobile-spec-list"
+          aria-expanded="${state.specListExpanded}"
+          disabled
+        >
+          <span class="spec-selector__summary">
+            <span class="spec-selector__label">Visual selector</span>
+            <strong>No matching visuals</strong>
+          </span>
+        </button>
+      </section>
+      <section id="spec-list" class="spec-list spec-list--empty">
         <div class="empty-state">
           <h2>No visuals match the current filters.</h2>
           <p>Try a different search term or tag.</p>
@@ -227,7 +245,37 @@ function renderSpecList(specs, selectedSpec) {
     )
     .join("");
 
-  return `<section class="spec-list">${cards}</section>`;
+  return `
+    <section class="spec-selector">
+      <button
+        class="spec-selector__toggle"
+        type="button"
+        data-toggle-spec-list="true"
+        aria-controls="mobile-spec-list"
+        aria-expanded="${state.specListExpanded}"
+      >
+        <span class="spec-selector__summary">
+          <span class="spec-selector__label">Visual selector</span>
+          <strong>${state.specListExpanded ? "Choose a visual" : escapeHtml(selectedTitle)}</strong>
+        </span>
+        <span class="spec-selector__action">
+          ${state.specListExpanded ? "Hide" : "Change"}
+        </span>
+      </button>
+      ${
+        state.specListExpanded
+          ? `
+            <div id="mobile-spec-list" class="spec-selector__list">
+              ${cards}
+            </div>
+          `
+          : ""
+      }
+    </section>
+    <section id="spec-list" class="spec-list">
+      ${cards}
+    </section>
+  `;
 }
 
 function renderSampleDataTable(rows) {
@@ -585,6 +633,13 @@ function attachEvents(root) {
     const tagToggle = event.target.closest("[data-toggle-tags]");
     if (tagToggle) {
       state.tagFiltersExpanded = !state.tagFiltersExpanded;
+      updateView();
+      return;
+    }
+
+    const specListToggle = event.target.closest("[data-toggle-spec-list]");
+    if (specListToggle) {
+      state.specListExpanded = !state.specListExpanded;
       updateView();
       return;
     }

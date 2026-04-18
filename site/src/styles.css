@@ -243,14 +243,24 @@ pre {
   align-items: start;
 }
 
+.content-grid > * {
+  min-width: 0;
+}
+
+.spec-selector {
+  display: none;
+}
+
 .spec-list {
   display: grid;
   gap: 8px;
   position: sticky;
   top: 12px;
+  min-width: 0;
 }
 
 .spec-card {
+  width: 100%;
   padding: 14px;
   border-radius: 8px;
   text-align: left;
@@ -282,6 +292,7 @@ pre {
 
 .detail-panel,
 .empty-state {
+  min-width: 0;
   border-radius: 8px;
   padding: 16px;
 }
@@ -511,6 +522,106 @@ pre {
 
   .filters-panel {
     align-items: stretch;
+  }
+
+  .spec-selector {
+    display: grid;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+  }
+
+  .spec-selector__toggle {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    width: 100%;
+    padding: 12px 14px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .spec-selector__toggle:disabled {
+    cursor: default;
+  }
+
+  .spec-selector__summary {
+    display: grid;
+    min-width: 0;
+    gap: 4px;
+  }
+
+  .spec-selector__summary strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .spec-selector__summary span {
+    color: var(--muted);
+  }
+
+  .spec-selector__label {
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  .spec-selector__action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--panel-muted);
+    color: var(--accent);
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .spec-selector__list {
+    display: grid;
+    max-height: 276px;
+    overflow-y: auto;
+    padding: 6px;
+    border-top: 1px solid var(--line);
+  }
+
+  .spec-selector__list .spec-card {
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    padding: 12px;
+  }
+
+  .spec-selector__list .spec-card + .spec-card {
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+  }
+
+  .spec-selector__list .spec-card.is-selected {
+    border-radius: 6px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+
+  .spec-list {
+    display: none;
+    position: static;
+  }
+
+  .spec-list--empty {
+    display: grid;
   }
 
   .spec-card__header {
