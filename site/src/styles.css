@@ -639,12 +639,11 @@ pre {
   }
 
   .site-header__aside {
-    width: 100%;
-    justify-items: stretch;
+    justify-items: start;
   }
 
   .repo-widget {
-    width: 100%;
+    max-width: 100%;
   }
 
   .inspector-tabs {
