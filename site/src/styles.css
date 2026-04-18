@@ -139,15 +139,16 @@ pre {
 
 .filters-panel {
   display: flex;
+  flex-direction: column;
   gap: 12px;
-  align-items: center;
+  align-items: stretch;
   margin-top: 12px;
   padding: 12px;
   border-radius: 8px;
 }
 
 .search-field {
-  flex: 1;
+  width: 100%;
 }
 
 .search-field input {
@@ -163,22 +164,34 @@ pre {
 .filter-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
 }
 
 .filter-chip {
-  padding: 8px 10px;
+  min-height: 28px;
+  padding: 5px 10px;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 999px;
   background: var(--panel-muted);
   color: var(--muted);
   cursor: pointer;
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .filter-chip.is-active {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent);
+  border-color: var(--tag-border);
+  background: var(--tag-bg);
+  color: var(--tag-text);
+}
+
+.filter-divider {
+  width: 1px;
+  height: 24px;
+  margin: 0 2px;
+  background: var(--line-strong);
 }
 
 .content-grid {

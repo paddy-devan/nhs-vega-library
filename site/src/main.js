@@ -3,8 +3,8 @@ import catalog from "./generated/catalog.json";
 import "./styles.css";
 
 const state = {
-  category: "All",
   query: "",
+  selectedTags: [],
   slug: null,
   inspectorTab: null,
 };
@@ -76,10 +76,12 @@ function getSpecs() {
   const query = state.query.trim().toLowerCase();
 
   return catalog.specs.filter((item) => {
-    const categoryMatches = state.category === "All" || item.category === state.category;
+    const tags = Array.isArray(item.tags) ? item.tags : [];
+    const tagMatches =
+      state.selectedTags.length === 0 || state.selectedTags.some((tag) => tags.includes(tag));
     const text = `${item.title} ${item.description} ${item.tags.join(" ")}`.toLowerCase();
     const queryMatches = query.length === 0 || text.includes(query);
-    return categoryMatches && queryMatches;
+    return tagMatches && queryMatches;
   });
 }
 
@@ -110,20 +112,6 @@ function updateHash(slug) {
 }
 
 function renderFilters() {
-  const options = ["All", ...catalog.categories]
-    .map(
-      (category) => `
-        <button
-          class="filter-chip${category === state.category ? " is-active" : ""}"
-          data-category="${category}"
-          type="button"
-        >
-          ${category}
-        </button>
-      `,
-    )
-    .join("");
-
   return `
     <section class="filters-panel">
       <label class="search-field">
@@ -134,10 +122,56 @@ function renderFilters() {
           value="${escapeHtml(state.query)}"
         />
       </label>
-      <div class="filter-row">
-        ${options}
+      <div class="filter-row" aria-label="Filter by tags">
+        ${renderTagFilterRow()}
       </div>
     </section>
+  `;
+}
+
+function renderTagFilterRow() {
+  const selectedTags = state.selectedTags.filter((tag) => getDistinctTags().includes(tag));
+  const inactiveTags = getDistinctTags().filter((tag) => !selectedTags.includes(tag));
+  const selectedOptions = selectedTags
+    .map(
+      (tag) => `
+        <button
+          class="filter-chip is-active"
+          style="${getPastelTagStyle(tag)}"
+          data-tag="${escapeHtml(tag)}"
+          type="button"
+        >
+          ${escapeHtml(tag)}
+        </button>
+      `,
+    )
+    .join("");
+  const inactiveOptions = inactiveTags.map((tag) => renderInactiveTagFilter(tag)).join("");
+
+  return `
+    ${selectedOptions}
+    ${selectedOptions && inactiveOptions ? '<span class="filter-divider" aria-hidden="true"></span>' : ""}
+    ${inactiveOptions}
+  `;
+}
+
+function getDistinctTags() {
+  return [
+    ...new Set(
+      catalog.specs.flatMap((item) => (Array.isArray(item.tags) ? item.tags : [])).filter(Boolean),
+    ),
+  ].sort((a, b) => a.localeCompare(b));
+}
+
+function renderInactiveTagFilter(tag) {
+  return `
+    <button
+      class="filter-chip"
+      data-tag="${escapeHtml(tag)}"
+      type="button"
+    >
+      ${escapeHtml(tag)}
+    </button>
   `;
 }
 
@@ -147,7 +181,7 @@ function renderSpecList(specs, selectedSpec) {
       <section class="spec-list">
         <div class="empty-state">
           <h2>No visuals match the current filters.</h2>
-          <p>Try a different search term or category.</p>
+          <p>Try a different search term or tag.</p>
         </div>
       </section>
     `;
@@ -381,7 +415,9 @@ function escapeHtml(value) {
   return value
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 function getShell() {
@@ -491,10 +527,10 @@ function updateFiltersUI() {
     searchInput.value = state.query;
   }
 
-  document.querySelectorAll("[data-category]").forEach((button) => {
-    const isActive = button.dataset.category === state.category;
-    button.classList.toggle("is-active", isActive);
-  });
+  const filterRow = document.querySelector(".filter-row");
+  if (filterRow) {
+    filterRow.innerHTML = renderTagFilterRow();
+  }
 }
 
 function attachEvents(root) {
@@ -508,9 +544,12 @@ function attachEvents(root) {
   });
 
   root.addEventListener("click", async (event) => {
-    const categoryButton = event.target.closest("[data-category]");
-    if (categoryButton) {
-      state.category = categoryButton.dataset.category;
+    const tagButton = event.target.closest("[data-tag]");
+    if (tagButton) {
+      const tag = tagButton.dataset.tag;
+      state.selectedTags = state.selectedTags.includes(tag)
+        ? state.selectedTags.filter((selectedTag) => selectedTag !== tag)
+        : [...state.selectedTags, tag];
       updateView();
       return;
     }
