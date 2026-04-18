@@ -52,7 +52,7 @@ pre {
 .detail-panel,
 .empty-state {
   background: var(--panel);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
 }
 
 .site-header {
@@ -118,7 +118,7 @@ pre {
 
 .repo-widget__icon svg {
   width: 18px;
-  height: 18px;
+  height: 20px;
 }
 
 .repo-widget__body {
@@ -133,9 +133,45 @@ pre {
 }
 
 .repo-widget__stars {
-  height: 20px;
-  width: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   flex: 0 0 auto;
+  color: #ffb81b;
+}
+
+.repo-widget__stars svg {
+  width: 14px;
+  height: 14px;
+}
+
+.repo-widget__stars-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 18px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel-muted);
+  color: var(--text);
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1;
+  overflow: hidden;
+}
+
+.repo-widget__stars-digit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 15px;
+  height: 100%;
+  padding: 0 2px;
+}
+
+.repo-widget__stars-digit + .repo-widget__stars-digit {
+  border-left: 1px solid var(--line-strong);
 }
 
 .filters-panel {
