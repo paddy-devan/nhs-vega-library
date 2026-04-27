@@ -1,0 +1,114 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v6.json",
+  "description": "Average discharge time trend with decimal hours formatted as clock times.",
+  "data": {
+    "name": "dataset"
+  },
+  "transform": [
+    {
+      "calculate": "format(floor(datum.avg_discharge_hour), '02') + ':' + format(round((datum.avg_discharge_hour - floor(datum.avg_discharge_hour)) * 60), '02')",
+      "as": "avg_discharge_time"
+    },
+    {
+      "joinaggregate": [
+        {
+          "op": "min",
+          "field": "avg_discharge_hour",
+          "as": "min_discharge_hour"
+        },
+        {
+          "op": "max",
+          "field": "avg_discharge_hour",
+          "as": "max_discharge_hour"
+        }
+      ]
+    },
+    {
+      "calculate": "floor((datum.min_discharge_hour - 0.25) * 2) / 2",
+      "as": "y_domain_min"
+    },
+    {
+      "calculate": "ceil((datum.max_discharge_hour + 0.25) * 2) / 2",
+      "as": "y_domain_max"
+    }
+  ],
+  "encoding": {
+    "x": {
+      "field": "discharge_month",
+      "type": "temporal",
+      "title": "Discharge month",
+      "axis": {
+        "tickCount": {
+          "interval": "month",
+          "step": 1
+        },
+        "format": "%b %Y"
+      }
+    }
+  },
+  "layer": [
+    {
+      "mark": {
+        "type": "line",
+        "point": true
+      },
+      "encoding": {
+        "y": {
+          "field": "avg_discharge_hour",
+          "type": "quantitative",
+          "title": "Average discharge time",
+          "scale": {
+            "zero": false
+          },
+          "axis": {
+            "tickMinStep": 0.5,
+            "labelExpr": "format(floor(datum.value), '02') + ':' + format(round((datum.value - floor(datum.value)) * 60), '02')"
+          }
+        },
+        "tooltip": [
+          {
+            "field": "discharge_month",
+            "type": "temporal",
+            "title": "Discharge month",
+            "format": "%B %Y"
+          },
+          {
+            "field": "avg_discharge_time",
+            "type": "nominal",
+            "title": "Average discharge time"
+          },
+          {
+            "field": "avg_discharge_hour",
+            "type": "quantitative",
+            "title": "Decimal hour",
+            "format": ".2f"
+          }
+        ]
+      }
+    },
+    {
+      "mark": {
+        "type": "point",
+        "opacity": 0
+      },
+      "encoding": {
+        "y": {
+          "field": "y_domain_min",
+          "type": "quantitative"
+        }
+      }
+    },
+    {
+      "mark": {
+        "type": "point",
+        "opacity": 0
+      },
+      "encoding": {
+        "y": {
+          "field": "y_domain_max",
+          "type": "quantitative"
+        }
+      }
+    }
+  ]
+}

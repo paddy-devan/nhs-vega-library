@@ -49,11 +49,26 @@ function parseSampleDataDates(sampleData) {
   );
 }
 
-function withDataset(spec, sampleData) {
+function withVegaDataset(spec, sampleData) {
   const nextSpec = cloneJson(spec);
   const dataset = nextSpec.data.find((entry) => entry && entry.name === "dataset");
   dataset.values = parseSampleDataDates(sampleData);
   return nextSpec;
+}
+
+function withVegaLiteDataset(spec, sampleData) {
+  const nextSpec = cloneJson(spec);
+  nextSpec.data = {
+    ...nextSpec.data,
+    values: parseSampleDataDates(sampleData),
+  };
+  return nextSpec;
+}
+
+function withDataset(spec, sampleData, language) {
+  return language === "vega-lite"
+    ? withVegaLiteDataset(spec, sampleData)
+    : withVegaDataset(spec, sampleData);
 }
 
 function withPreviewDimensions(spec, previewNode) {
@@ -66,8 +81,7 @@ function withPreviewDimensions(spec, previewNode) {
     previewNode.parentElement?.clientWidth ||
     0;
 
-  // Keep the preview usable for wider gantt-style charts even on narrow layouts.
-  nextSpec.width = Math.max(760, innerWidth);
+  nextSpec.width = Math.max(320, innerWidth - 64);
   nextSpec.height = 560;
 
   return nextSpec;
@@ -366,7 +380,9 @@ function getPastelTagStyle(label) {
 }
 
 function renderMetaPills(spec) {
-  return (Array.isArray(spec.tags) ? spec.tags : [])
+  const pills = [spec.language, ...(Array.isArray(spec.tags) ? spec.tags : [])];
+
+  return pills
     .filter(Boolean)
     .map(
       (tag) => `
@@ -523,10 +539,12 @@ async function renderPreview(selectedSpec) {
   const previewSpec = withDataset(
     withPreviewDimensions(selectedSpec.spec, previewShell),
     selectedSpec.sampleData,
+    selectedSpec.language,
   );
 
   await embed(previewFrame, previewSpec, {
     actions: false,
+    mode: selectedSpec.language === "vega-lite" ? "vega-lite" : "vega",
     renderer: "svg",
   });
 }
