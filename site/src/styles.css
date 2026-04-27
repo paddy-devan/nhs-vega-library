@@ -400,13 +400,17 @@ pre {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .preview-frame {
-  width: max-content;
-  min-width: 100%;
+  width: 100%;
   margin: 0 auto;
+}
+
+.preview-frame .vega-embed {
+  max-width: 100%;
 }
 
 .inspector-panel {

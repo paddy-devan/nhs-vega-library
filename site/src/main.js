@@ -81,8 +81,7 @@ function withPreviewDimensions(spec, previewNode) {
     previewNode.parentElement?.clientWidth ||
     0;
 
-  // Keep the preview usable for wider gantt-style charts even on narrow layouts.
-  nextSpec.width = Math.max(760, innerWidth);
+  nextSpec.width = Math.max(320, innerWidth - 64);
   nextSpec.height = 560;
 
   return nextSpec;
