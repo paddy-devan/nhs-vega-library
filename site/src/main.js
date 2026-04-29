@@ -7,12 +7,16 @@ const state = {
   selectedTags: [],
   tagFiltersExpanded: false,
   specListExpanded: false,
+  gridColumns: 3,
   slug: null,
+  quickPreviewSlug: null,
+  quickPreviewInspectorTab: null,
   inspectorTab: null,
 };
 
 const viewState = {
   selectedSlug: null,
+  quickPreviewSlug: null,
 };
 
 let resizeFrame = null;
@@ -71,7 +75,7 @@ function withDataset(spec, sampleData, language) {
     : withVegaDataset(spec, sampleData);
 }
 
-function withPreviewDimensions(spec, previewNode) {
+function withPreviewDimensions(spec, previewNode, options = {}) {
   const nextSpec = cloneJson(spec);
   const styles = window.getComputedStyle(previewNode);
   const paddingLeft = Number.parseFloat(styles.paddingLeft) || 0;
@@ -80,9 +84,20 @@ function withPreviewDimensions(spec, previewNode) {
     previewNode.clientWidth - paddingLeft - paddingRight ||
     previewNode.parentElement?.clientWidth ||
     0;
+  const innerHeight = previewNode.clientHeight || 0;
 
-  nextSpec.width = Math.max(320, innerWidth - 64);
-  nextSpec.height = 560;
+  nextSpec.width = Math.max(options.minWidth ?? 320, innerWidth - (options.widthOffset ?? 64));
+  nextSpec.height =
+    options.height ??
+    Math.max(options.minHeight ?? 320, innerHeight - (options.heightOffset ?? 48));
+
+  if (options.fit) {
+    nextSpec.autosize = {
+      type: "fit",
+      contains: "padding",
+      resize: true,
+    };
+  }
 
   return nextSpec;
 }
@@ -154,6 +169,29 @@ function renderFilters() {
             ></path>
           </svg>
         </button>
+        <div class="column-toggle" role="group" aria-label="Choose gallery columns">
+          ${[1, 2, 3]
+            .map(
+              (columns) => `
+                <button
+                  class="column-toggle__button${state.gridColumns === columns ? " is-active" : ""}"
+                  type="button"
+                  data-grid-columns="${columns}"
+                  aria-label="${columns} ${columns === 1 ? "column" : "columns"}"
+                  aria-pressed="${state.gridColumns === columns}"
+                  title="${columns} ${columns === 1 ? "column" : "columns"}"
+                >
+                  <span
+                    class="column-toggle__icon column-toggle__icon--${columns}"
+                    aria-hidden="true"
+                  >
+                    ${Array.from({ length: columns }, () => '<span></span>').join("")}
+                  </span>
+                </button>
+              `,
+            )
+            .join("")}
+        </div>
       </div>
       <div
         id="tag-filter-row"
@@ -212,27 +250,10 @@ function renderInactiveTagFilter(tag) {
   `;
 }
 
-function renderSpecList(specs, selectedSpec) {
-  const selectedTitle = selectedSpec?.title ?? "No visual selected";
-
+function renderSpecList(specs) {
   if (specs.length === 0) {
     return `
-      <section class="spec-selector">
-        <button
-          class="spec-selector__toggle"
-          type="button"
-          data-toggle-spec-list="true"
-          aria-controls="mobile-spec-list"
-          aria-expanded="${state.specListExpanded}"
-          disabled
-        >
-          <span class="spec-selector__summary">
-            <span class="spec-selector__label">Visual selector</span>
-            <strong>No matching visuals</strong>
-          </span>
-        </button>
-      </section>
-      <section id="spec-list" class="spec-list spec-list--empty">
+      <section id="spec-list" class="spec-grid spec-grid--empty">
         <div class="empty-state">
           <h2>No visuals match the current filters.</h2>
           <p>Try a different search term or tag.</p>
@@ -245,47 +266,28 @@ function renderSpecList(specs, selectedSpec) {
     .map(
       (item) => `
         <button
-          class="spec-card${selectedSpec?.slug === item.slug ? " is-selected" : ""}"
+          class="spec-card"
           type="button"
           data-slug="${item.slug}"
         >
+          <div class="spec-card__preview" data-card-preview="${item.slug}">
+            <div class="spec-card__preview-frame"></div>
+          </div>
           <div class="spec-card__header">
             <h2>${item.title}</h2>
+            <span class="spec-card__category">${escapeHtml(item.category)}</span>
           </div>
           <p>${item.description}</p>
+          <div class="meta-pill-row spec-card__meta" aria-label="Visual metadata">
+            ${renderMetaPills(item)}
+          </div>
         </button>
       `,
     )
     .join("");
 
   return `
-    <section class="spec-selector">
-      <button
-        class="spec-selector__toggle"
-        type="button"
-        data-toggle-spec-list="true"
-        aria-controls="mobile-spec-list"
-        aria-expanded="${state.specListExpanded}"
-      >
-        <span class="spec-selector__summary">
-          <span class="spec-selector__label">Visual selector</span>
-          <strong>${state.specListExpanded ? "Choose a visual" : escapeHtml(selectedTitle)}</strong>
-        </span>
-        <span class="spec-selector__action">
-          ${state.specListExpanded ? "Hide" : "Change"}
-        </span>
-      </button>
-      ${
-        state.specListExpanded
-          ? `
-            <div id="mobile-spec-list" class="spec-selector__list">
-              ${cards}
-            </div>
-          `
-          : ""
-      }
-    </section>
-    <section id="spec-list" class="spec-list">
+    <section id="spec-list" class="spec-grid" aria-label="Visual gallery">
       ${cards}
     </section>
   `;
@@ -422,19 +424,72 @@ function renderDetail(spec) {
         <div id="vega-preview-frame" class="preview-frame"></div>
       </div>
       <section id="inspector-panel" class="inspector-panel">
-        ${renderInspector(spec)}
+        ${renderInspector(spec, state.inspectorTab, "detail")}
       </section>
     </section>
   `;
 }
 
-function renderInspector(spec) {
+function renderQuickPreviewOverlay(spec) {
+  if (!spec) {
+    return "";
+  }
+
+  return `
+    <div
+      class="quick-preview-backdrop"
+      data-quick-preview-backdrop="true"
+      role="presentation"
+    >
+      <section
+        class="quick-preview-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="quick-preview-title"
+      >
+        <div class="quick-preview-panel__header">
+          <div class="quick-preview-panel__intro">
+            <div class="quick-preview-panel__title-row">
+              <h2 id="quick-preview-title">${spec.title}</h2>
+              <div class="meta-pill-row" aria-label="Visual metadata">
+                ${renderMetaPills(spec)}
+              </div>
+            </div>
+            <p>${spec.description}</p>
+          </div>
+          <button
+            class="quick-preview-panel__close"
+            type="button"
+            data-close-quick-preview="true"
+            aria-label="Close quick preview"
+            title="Close quick preview"
+          >
+            <svg viewBox="0 0 16 16" focusable="false" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M3.72 3.72a.75.75 0 0 1 1.06 0L8 6.94l3.22-3.22a.75.75 0 1 1 1.06 1.06L9.06 8l3.22 3.22a.75.75 0 1 1-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 0 1-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 0 1 0-1.06Z"
+              ></path>
+            </svg>
+          </button>
+        </div>
+        <div id="quick-preview-vega" class="preview-shell quick-preview-panel__preview">
+          <div id="quick-preview-vega-frame" class="preview-frame"></div>
+        </div>
+        <section id="quick-preview-inspector-panel" class="inspector-panel">
+          ${renderInspector(spec, state.quickPreviewInspectorTab, "quick-preview")}
+        </section>
+      </section>
+    </div>
+  `;
+}
+
+function renderInspector(spec, selectedInspectorTab, scope) {
   const tabs = [
     { id: "spec", label: "Spec JSON" },
     { id: "inputs", label: "Inputs" },
     { id: "sample", label: "Sample Data" },
   ];
-  const selectedTab = tabs.find((tab) => tab.id === state.inspectorTab) ?? null;
+  const selectedTab = tabs.find((tab) => tab.id === selectedInspectorTab) ?? null;
   const tabContent = {
     spec: JSON.stringify(spec.spec, null, 2),
     sample: renderSampleDataTable(spec.sampleData),
@@ -452,6 +507,7 @@ function renderInspector(spec) {
               role="tab"
               aria-selected="${selectedTab?.id === tab.id}"
               data-inspector-tab="${tab.id}"
+              data-inspector-scope="${scope}"
             >
               ${tab.label}
             </button>
@@ -470,6 +526,7 @@ function renderInspector(spec) {
                     class="copy-button copy-button--overlay"
                     type="button"
                     data-copy-spec="true"
+                    data-copy-scope="${scope}"
                     aria-label="Copy spec JSON to clipboard"
                     title="Copy spec JSON"
                   >
@@ -511,6 +568,7 @@ function getShell() {
     filters: document.querySelector("#filters-slot"),
     list: document.querySelector("#spec-list-slot"),
     detail: document.querySelector("#detail-slot"),
+    quickPreview: document.querySelector("#quick-preview-slot"),
   };
 }
 
@@ -519,25 +577,43 @@ function getSelectedSpecFromView() {
   return getSelectedSpec(specs);
 }
 
+function getQuickPreviewSpec() {
+  if (!state.quickPreviewSlug) {
+    return null;
+  }
+
+  return catalog.specs.find((item) => item.slug === state.quickPreviewSlug) ?? null;
+}
+
 function renderInspectorPanel(selectedSpec) {
   const inspectorPanel = document.querySelector("#inspector-panel");
   if (!inspectorPanel || !selectedSpec) {
     return;
   }
 
-  inspectorPanel.innerHTML = renderInspector(selectedSpec);
+  inspectorPanel.innerHTML = renderInspector(selectedSpec, state.inspectorTab, "detail");
 }
 
-async function renderPreview(selectedSpec) {
-  const previewShell = document.querySelector("#vega-preview");
-  const previewFrame = document.querySelector("#vega-preview-frame");
+function renderQuickPreviewInspectorPanel(selectedSpec) {
+  const inspectorPanel = document.querySelector("#quick-preview-inspector-panel");
+  if (!inspectorPanel || !selectedSpec) {
+    return;
+  }
 
+  inspectorPanel.innerHTML = renderInspector(
+    selectedSpec,
+    state.quickPreviewInspectorTab,
+    "quick-preview",
+  );
+}
+
+async function renderPreviewInto(selectedSpec, previewShell, previewFrame, options = {}) {
   if (!previewShell || !previewFrame || !selectedSpec) {
     return;
   }
 
   const previewSpec = withDataset(
-    withPreviewDimensions(selectedSpec.spec, previewShell),
+    withPreviewDimensions(selectedSpec.spec, previewShell, options),
     selectedSpec.sampleData,
     selectedSpec.language,
   );
@@ -545,8 +621,72 @@ async function renderPreview(selectedSpec) {
   await embed(previewFrame, previewSpec, {
     actions: false,
     mode: selectedSpec.language === "vega-lite" ? "vega-lite" : "vega",
-    renderer: "svg",
+    renderer: options.renderer ?? "svg",
   });
+}
+
+async function renderPreview(selectedSpec, previewSelector = "#vega-preview", frameSelector = "#vega-preview-frame", options = {}) {
+  await renderPreviewInto(
+    selectedSpec,
+    document.querySelector(previewSelector),
+    document.querySelector(frameSelector),
+    options,
+  );
+}
+
+async function renderCardPreviews({ force = false } = {}) {
+  const previewNodes = [...document.querySelectorAll("[data-card-preview]")];
+
+  await Promise.all(
+    previewNodes.map(async (previewNode) => {
+      if (!force && previewNode.dataset.previewRendered === "true") {
+        return;
+      }
+
+      const selectedSpec = catalog.specs.find((item) => item.slug === previewNode.dataset.cardPreview);
+      const previewFrame = previewNode.querySelector(".spec-card__preview-frame");
+
+      previewNode.dataset.previewRendered = "true";
+      await renderPreviewInto(selectedSpec, previewNode, previewFrame, {
+        fit: true,
+        minHeight: 140,
+        minWidth: 180,
+        widthOffset: 12,
+        heightOffset: 16,
+      });
+    }),
+  );
+}
+
+async function renderQuickPreview() {
+  const quickPreviewSlot = document.querySelector("#quick-preview-slot");
+  const selectedSpec = getQuickPreviewSpec();
+
+  if (!quickPreviewSlot) {
+    return;
+  }
+
+  const hasQuickPreview = Boolean(selectedSpec);
+  const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+  document.body.classList.toggle("has-quick-preview", hasQuickPreview);
+  document.body.style.setProperty(
+    "--scrollbar-compensation",
+    hasQuickPreview ? `${Math.max(0, scrollbarWidth)}px` : "0px",
+  );
+
+  if (!selectedSpec) {
+    quickPreviewSlot.innerHTML = "";
+    viewState.quickPreviewSlug = null;
+    return;
+  }
+
+  const selectedChanged = viewState.quickPreviewSlug !== selectedSpec.slug;
+
+  if (selectedChanged || !quickPreviewSlot.innerHTML.trim()) {
+    quickPreviewSlot.innerHTML = renderQuickPreviewOverlay(selectedSpec);
+    viewState.quickPreviewSlug = selectedSpec.slug;
+    await renderPreview(selectedSpec, "#quick-preview-vega", "#quick-preview-vega-frame");
+  }
 }
 
 function renderStarDigits(value) {
@@ -639,8 +779,8 @@ function mountApp() {
       <div id="filters-slot">${renderFilters()}</div>
       <main class="content-grid">
         <div id="spec-list-slot"></div>
-        <div id="detail-slot"></div>
       </main>
+      <div id="quick-preview-slot"></div>
     </div>
   `;
 
@@ -672,6 +812,13 @@ function updateFiltersUI() {
       state.tagFiltersExpanded ? "Hide tag filters" : "Show tag filters",
     );
   }
+
+  const columnButtons = document.querySelectorAll("[data-grid-columns]");
+  columnButtons.forEach((button) => {
+    const isActive = Number(button.dataset.gridColumns) === state.gridColumns;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
 }
 
 function attachEvents(root) {
@@ -685,6 +832,22 @@ function attachEvents(root) {
   });
 
   root.addEventListener("click", async (event) => {
+    const closeQuickPreviewButton = event.target.closest("[data-close-quick-preview]");
+    if (closeQuickPreviewButton) {
+      state.quickPreviewSlug = null;
+      state.quickPreviewInspectorTab = null;
+      await renderQuickPreview();
+      return;
+    }
+
+    const quickPreviewBackdrop = event.target.closest("[data-quick-preview-backdrop]");
+    if (quickPreviewBackdrop && event.target === quickPreviewBackdrop) {
+      state.quickPreviewSlug = null;
+      state.quickPreviewInspectorTab = null;
+      await renderQuickPreview();
+      return;
+    }
+
     const tagToggle = event.target.closest("[data-toggle-tags]");
     if (tagToggle) {
       state.tagFiltersExpanded = !state.tagFiltersExpanded;
@@ -711,25 +874,41 @@ function attachEvents(root) {
 
     const specButton = event.target.closest("[data-slug]");
     if (specButton) {
-      state.slug = specButton.dataset.slug;
-      updateHash(state.slug);
-      await updateView();
+      state.quickPreviewSlug = specButton.dataset.slug;
+      state.quickPreviewInspectorTab = null;
+      await renderQuickPreview();
+      return;
+    }
+
+    const gridColumnsButton = event.target.closest("[data-grid-columns]");
+    if (gridColumnsButton) {
+      state.gridColumns = Number(gridColumnsButton.dataset.gridColumns);
+      updateView();
       return;
     }
 
     const inspectorButton = event.target.closest("[data-inspector-tab]");
     if (inspectorButton) {
-      state.inspectorTab =
-        state.inspectorTab === inspectorButton.dataset.inspectorTab
-          ? null
-          : inspectorButton.dataset.inspectorTab;
+      const tab = inspectorButton.dataset.inspectorTab;
+      const scope = inspectorButton.dataset.inspectorScope;
+
+      if (scope === "quick-preview") {
+        state.quickPreviewInspectorTab = state.quickPreviewInspectorTab === tab ? null : tab;
+        renderQuickPreviewInspectorPanel(getQuickPreviewSpec());
+        return;
+      }
+
+      state.inspectorTab = state.inspectorTab === tab ? null : tab;
       renderInspectorPanel(getSelectedSpecFromView());
       return;
     }
 
     const copyButton = event.target.closest("[data-copy-spec='true']");
     if (copyButton) {
-      const selectedSpec = getSelectedSpecFromView();
+      const selectedSpec =
+        copyButton.dataset.copyScope === "quick-preview"
+          ? getQuickPreviewSpec()
+          : getSelectedSpecFromView();
       if (selectedSpec) {
         await navigator.clipboard.writeText(JSON.stringify(selectedSpec.spec, null, 2));
       }
@@ -740,34 +919,40 @@ function attachEvents(root) {
 async function updateView() {
   const shell = getShell();
   const specs = getSpecs();
-  const selectedSpec = getSelectedSpec(specs);
-  const selectedChanged = viewState.selectedSlug !== selectedSpec?.slug;
 
   if (shell.filters) {
     updateFiltersUI();
   }
 
   if (shell.list) {
-    shell.list.innerHTML = renderSpecList(specs, selectedSpec);
+    shell.list.innerHTML = renderSpecList(specs);
+    shell.list.style.setProperty("--grid-columns", state.gridColumns);
+    await renderCardPreviews();
   }
 
-  if (shell.detail && (selectedChanged || !shell.detail.innerHTML.trim())) {
-    shell.detail.innerHTML = renderDetail(selectedSpec);
-    viewState.selectedSlug = selectedSpec?.slug ?? null;
-    await renderPreview(selectedSpec);
-    return;
-  }
-
-  viewState.selectedSlug = selectedSpec?.slug ?? null;
+  await renderQuickPreview();
 }
 
 async function rerenderPreview() {
-  await renderPreview(getSelectedSpecFromView());
+  await renderCardPreviews({ force: true });
+  if (getQuickPreviewSpec()) {
+    await renderPreview(getQuickPreviewSpec(), "#quick-preview-vega", "#quick-preview-vega-frame");
+  }
 }
 
 window.addEventListener("hashchange", async () => {
   readHashSlug();
   await updateView();
+});
+
+window.addEventListener("keydown", async (event) => {
+  if (event.key !== "Escape" || !state.quickPreviewSlug) {
+    return;
+  }
+
+  state.quickPreviewSlug = null;
+  state.quickPreviewInspectorTab = null;
+  await renderQuickPreview();
 });
 
 window.addEventListener("resize", () => {
