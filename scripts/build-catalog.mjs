@@ -9,7 +9,8 @@ const specsDir = path.join(repoRoot, "specs");
 const outputDir = path.join(repoRoot, "site", "src", "generated");
 const outputFile = path.join(outputDir, "catalog.json");
 
-const requiredMetaFields = ["title", "category", "description", "tags"];
+const requiredMetaFields = ["title", "category", "description", "tags", "language"];
+const supportedLanguages = new Set(["vega", "vega-lite"]);
 
 function fail(message) {
   throw new Error(message);
@@ -46,15 +47,19 @@ function validateMeta(meta, folderName) {
   if (!Array.isArray(meta.tags) || meta.tags.some((tag) => typeof tag !== "string")) {
     fail(`meta.tags must be an array of strings for specs/${folderName}`);
   }
+
+  if (!supportedLanguages.has(meta.language)) {
+    fail(
+      `meta.language must be one of ${[...supportedLanguages]
+        .map((language) => `"${language}"`)
+        .join(", ")} for specs/${folderName}`,
+    );
+  }
 }
 
-function validateSpec(spec, folderName) {
-  if (!spec || typeof spec !== "object") {
-    fail(`spec.json must contain an object for specs/${folderName}`);
-  }
-
+function validateVegaSpec(spec, folderName) {
   if (!Array.isArray(spec.data)) {
-    fail(`spec.json must contain a data array for specs/${folderName}`);
+    fail(`Vega spec.json must contain a data array for specs/${folderName}`);
   }
 
   const hasDatasetSource = spec.data.some(
@@ -62,8 +67,31 @@ function validateSpec(spec, folderName) {
   );
 
   if (!hasDatasetSource) {
-    fail(`spec.json must define a data source named "dataset" for specs/${folderName}`);
+    fail(`Vega spec.json must define a data source named "dataset" for specs/${folderName}`);
   }
+}
+
+function validateVegaLiteSpec(spec, folderName) {
+  if (!spec.data || typeof spec.data !== "object" || Array.isArray(spec.data)) {
+    fail(`Vega-Lite spec.json must contain a data object for specs/${folderName}`);
+  }
+
+  if (spec.data.name !== "dataset") {
+    fail(`Vega-Lite spec.json must define data.name as "dataset" for specs/${folderName}`);
+  }
+}
+
+function validateSpec(spec, language, folderName) {
+  if (!spec || typeof spec !== "object") {
+    fail(`spec.json must contain an object for specs/${folderName}`);
+  }
+
+  if (language === "vega") {
+    validateVegaSpec(spec, folderName);
+    return;
+  }
+
+  validateVegaLiteSpec(spec, folderName);
 }
 
 function validateSampleData(sampleData, folderName) {
@@ -100,7 +128,7 @@ async function main() {
     ]);
 
     validateMeta(meta, folderName);
-    validateSpec(spec, folderName);
+    validateSpec(spec, meta.language, folderName);
     validateSampleData(sampleData, folderName);
 
     const slug = folderName;
