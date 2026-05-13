@@ -1,0 +1,49 @@
+{
+  "title": "Variance Chart",
+  "category": "Analytics",
+  "description": "Compare adjusted DNA rate differences across grouped dimensions, with confidence intervals and tooltips for each cohort.",
+  "language": "vega",
+  "tags": ["variance", "benchmarking", "inequalities"],
+  "inputs": [
+    {
+      "name": "dimension_name",
+      "type": "string",
+      "description": "Name of the grouping dimension shown as a chart column, for example Sex, Age group, or Specialty."
+    },
+    {
+      "name": "dimension_order",
+      "type": "number",
+      "description": "Sort order for the grouping dimensions from left to right."
+    },
+    {
+      "name": "dimension_value",
+      "type": "string",
+      "description": "Cohort or category label plotted within the dimension and shown in tooltips."
+    },
+    {
+      "name": "value_order",
+      "type": "number",
+      "description": "Optional ordering value for categories within a dimension. Retain for consistent source data ordering."
+    },
+    {
+      "name": "measure_value",
+      "type": "number",
+      "description": "Adjusted DNA rate difference from expected or benchmark value, in percentage points. Positive values appear above zero and negative values below zero."
+    },
+    {
+      "name": "ci_lower",
+      "type": "number",
+      "description": "Lower bound of the confidence interval for the adjusted difference."
+    },
+    {
+      "name": "ci_upper",
+      "type": "number",
+      "description": "Upper bound of the confidence interval for the adjusted difference."
+    },
+    {
+      "name": "n_spells",
+      "type": "number",
+      "description": "Count of appointments represented by the cohort, shown in the tooltip."
+    }
+  ]
+}

@@ -1,0 +1,175 @@
+[
+  {
+    "dimension_name": "Sex",
+    "dimension_order": 1,
+    "dimension_value": "Male",
+    "value_order": 1,
+    "measure_value": 0.4,
+    "ci_lower": 0.2,
+    "ci_upper": 0.6,
+    "n_spells": 18420
+  },
+  {
+    "dimension_name": "Sex",
+    "dimension_order": 1,
+    "dimension_value": "Female",
+    "value_order": 2,
+    "measure_value": -0.3,
+    "ci_lower": -0.5,
+    "ci_upper": -0.1,
+    "n_spells": 20110
+  },
+  {
+    "dimension_name": "Age group",
+    "dimension_order": 2,
+    "dimension_value": "Under 18",
+    "value_order": 1,
+    "measure_value": 1.1,
+    "ci_lower": 0.8,
+    "ci_upper": 1.4,
+    "n_spells": 6420
+  },
+  {
+    "dimension_name": "Age group",
+    "dimension_order": 2,
+    "dimension_value": "18-44",
+    "value_order": 2,
+    "measure_value": 1.7,
+    "ci_lower": 1.3,
+    "ci_upper": 2.1,
+    "n_spells": 9270
+  },
+  {
+    "dimension_name": "Age group",
+    "dimension_order": 2,
+    "dimension_value": "45-64",
+    "value_order": 3,
+    "measure_value": 0.2,
+    "ci_lower": -0.1,
+    "ci_upper": 0.5,
+    "n_spells": 11180
+  },
+  {
+    "dimension_name": "Age group",
+    "dimension_order": 2,
+    "dimension_value": "65-84",
+    "value_order": 4,
+    "measure_value": -0.6,
+    "ci_lower": -0.9,
+    "ci_upper": -0.3,
+    "n_spells": 8730
+  },
+  {
+    "dimension_name": "Age group",
+    "dimension_order": 2,
+    "dimension_value": "85+",
+    "value_order": 5,
+    "measure_value": -1.0,
+    "ci_lower": -1.4,
+    "ci_upper": -0.6,
+    "n_spells": 2930
+  },
+
+  {
+    "dimension_name": "Specialty",
+    "dimension_order": 3,
+    "dimension_value": "Cardiology",
+    "value_order": 1,
+    "measure_value": -0.2,
+    "ci_lower": -0.5,
+    "ci_upper": 0.1,
+    "n_spells": 4180
+  },
+  {
+    "dimension_name": "Specialty",
+    "dimension_order": 3,
+    "dimension_value": "Respiratory",
+    "value_order": 2,
+    "measure_value": 0.9,
+    "ci_lower": 0.5,
+    "ci_upper": 1.3,
+    "n_spells": 3920
+  },
+  {
+    "dimension_name": "Specialty",
+    "dimension_order": 3,
+    "dimension_value": "General surgery",
+    "value_order": 3,
+    "measure_value": 0.1,
+    "ci_lower": -0.2,
+    "ci_upper": 0.4,
+    "n_spells": 5270
+  },
+  {
+    "dimension_name": "Specialty",
+    "dimension_order": 3,
+    "dimension_value": "ENT",
+    "value_order": 4,
+    "measure_value": 1.4,
+    "ci_lower": 0.9,
+    "ci_upper": 1.9,
+    "n_spells": 1860
+  },
+  {
+    "dimension_name": "Specialty",
+    "dimension_order": 3,
+    "dimension_value": "Trauma & orthopaedics",
+    "value_order": 5,
+    "measure_value": -0.4,
+    "ci_lower": -0.8,
+    "ci_upper": 0.0,
+    "n_spells": 4760
+  },
+
+  {
+    "dimension_name": "Pathway type",
+    "dimension_order": 4,
+    "dimension_value": "Inpatient",
+    "value_order": 1,
+    "measure_value": -0.8,
+    "ci_lower": -1.1,
+    "ci_upper": -0.5,
+    "n_spells": 12140
+  },
+  {
+    "dimension_name": "Pathway type",
+    "dimension_order": 4,
+    "dimension_value": "Outpatient",
+    "value_order": 2,
+    "measure_value": 0.7,
+    "ci_lower": 0.5,
+    "ci_upper": 0.9,
+    "n_spells": 23880
+  },
+  {
+    "dimension_name": "Pathway type",
+    "dimension_order": 4,
+    "dimension_value": "Diagnostic",
+    "value_order": 3,
+    "measure_value": 0.2,
+    "ci_lower": -0.1,
+    "ci_upper": 0.5,
+    "n_spells": 2510
+  },
+
+  {
+    "dimension_name": "Appointment type",
+    "dimension_order": 5,
+    "dimension_value": "New",
+    "value_order": 1,
+    "measure_value": 0.8,
+    "ci_lower": 0.55,
+    "ci_upper": 1.2,
+    "n_spells": 15680
+  },
+  {
+    "dimension_name": "Appointment type",
+    "dimension_order": 5,
+    "dimension_value": "Follow up",
+    "value_order": 2,
+    "measure_value": -0.4,
+    "ci_lower": -0.8,
+    "ci_upper": 0.2,
+    "n_spells": 22640
+  }
+]

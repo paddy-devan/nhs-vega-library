@@ -1,0 +1,268 @@
+{
+  "$schema": "https://vega.github.io/schema/vega/v5.json",
+  "description": "Adjusted DNA rate difference by healthcare group.",
+  "autosize": {
+    "type": "fit",
+    "contains": "padding"
+  },
+  "padding": {
+    "left": 8,
+    "right": 42,
+    "top": 8,
+    "bottom": 14
+  },
+  "background": "white",
+
+  "data": [
+    {
+      "name": "dataset",
+      "transform": [
+        {
+          "type": "formula",
+          "as": "tooltip_text",
+          "expr": "datum.dimension_name + ': ' + datum.dimension_value + '\\nDNA rate difference: ' + format(datum.measure_value, '+.1f') + ' pp\\n50% CI: ' + format(datum.ci_lower, '+.1f') + ' to ' + format(datum.ci_upper, '+.1f') + ' pp\\nAppointments: ' + format(datum.n_spells, ',.0f')"
+        }
+      ]
+    },
+    {
+      "name": "dimensions",
+      "source": "dataset",
+      "transform": [
+        {
+          "type": "aggregate",
+          "groupby": ["dimension_name"],
+          "fields": ["dimension_order"],
+          "ops": ["min"],
+          "as": ["dimension_order"]
+        },
+        {
+          "type": "formula",
+          "as": "dimension_label",
+          "expr": "split(datum.dimension_name, ' ')"
+        }
+      ]
+    }
+  ],
+
+  "signals": [
+    { "name": "blue", "value": "#2563eb" },
+    { "name": "blueLight", "value": "#93c5fd" },
+    { "name": "labelColor", "value": "#111111" },
+    { "name": "gridColor", "value": "#dddddd" }
+  ],
+
+  "scales": [
+    {
+      "name": "x",
+      "type": "band",
+      "domain": {
+        "data": "dimensions",
+        "field": "dimension_name",
+        "sort": {
+          "op": "min",
+          "field": "dimension_order",
+          "order": "ascending"
+        }
+      },
+      "range": [
+        0,
+        {
+          "signal": "length(data('dimensions')) > 0 ? width * (2 * length(data('dimensions'))) / (2 * length(data('dimensions')) + 1) : width"
+        }
+      ],
+      "paddingInner": 0,
+      "paddingOuter": 0
+    },
+    {
+      "name": "y",
+      "type": "linear",
+      "domain": [-2, 4],
+      "range": "height",
+      "nice": false,
+      "zero": true
+    }
+  ],
+
+  "axes": [
+    {
+      "scale": "y",
+      "orient": "right",
+      "grid": true,
+      "domain": false,
+      "tickSize": 0,
+      "labelPadding": 8,
+      "labelColor": "#111111",
+      "values": [-2, 0, 2, 4],
+      "format": "+.0f",
+      "zindex": 0,
+      "encode": {
+        "labels": {
+          "update": {
+            "fontSize": { "value": 11 }
+          }
+        }
+      }
+    }
+  ],
+
+  "marks": [
+    {
+      "type": "text",
+      "from": { "data": "dimensions" },
+      "encode": {
+        "enter": {
+          "x": {
+            "scale": "x",
+            "field": "dimension_name",
+            "band": 0.5
+          },
+          "text": { "field": "dimension_label" },
+          "align": { "value": "center" },
+          "baseline": { "value": "top" },
+          "fontWeight": { "value": "bold" },
+          "fill": { "value": "#333333" },
+          "ellipsis": { "value": "…" }
+        },
+        "update": {
+          "y": { "value": -28 },
+          "text": { "field": "dimension_label" },
+          "fontSize": { "value": 11 },
+          "lineHeight": { "value": 12 },
+          "limit": { "signal": "max(8, bandwidth('x') - 6)" }
+        }
+      }
+    },
+
+    {
+      "type": "rule",
+      "from": { "data": "dimensions" },
+      "encode": {
+        "enter": {
+          "x": { "scale": "x", "field": "dimension_name", "band": 0.5 },
+          "y": { "value": 0 },
+          "y2": { "signal": "height" },
+          "stroke": { "signal": "gridColor" },
+          "strokeWidth": { "value": 1 }
+        }
+      }
+    },
+
+    {
+      "type": "rule",
+      "encode": {
+        "enter": {
+          "x": { "value": 0 },
+          "x2": { "signal": "width" },
+          "y": { "scale": "y", "value": 0 },
+          "stroke": { "value": "#111111" },
+          "strokeWidth": { "value": 1 }
+        }
+      }
+    },
+
+    {
+      "type": "rect",
+      "from": { "data": "dataset" },
+      "encode": {
+        "enter": {
+          "y": { "scale": "y", "field": "ci_upper" },
+          "y2": { "scale": "y", "field": "ci_lower" },
+          "fill": { "signal": "blueLight" },
+          "fillOpacity": { "value": 0.45 },
+          "tooltip": { "field": "tooltip_text" }
+        },
+        "update": {
+          "x": {
+            "signal": "scale('x', datum.dimension_name) + bandwidth('x') / 2 - 8"
+          },
+          "x2": {
+            "signal": "scale('x', datum.dimension_name) + bandwidth('x') / 2 + 8"
+          }
+        }
+      }
+    },
+
+    {
+      "type": "symbol",
+      "from": { "data": "dataset" },
+      "encode": {
+        "enter": {
+          "x": { "scale": "x", "field": "dimension_name", "band": 0.5 },
+          "y": { "scale": "y", "field": "measure_value" },
+          "shape": { "value": "circle" },
+          "fill": { "signal": "blue" },
+          "stroke": { "value": "white" },
+          "strokeWidth": { "value": 1.5 },
+          "tooltip": { "field": "tooltip_text" }
+        },
+        "update": {
+          "size": { "value": 230 }
+        }
+      }
+    },
+
+    {
+      "type": "text",
+      "clip": true,
+      "from": { "data": "dataset" },
+      "encode": {
+        "enter": {
+          "x": {
+            "scale": "x",
+            "field": "dimension_name",
+            "band": 0.5
+          },
+          "y": {
+            "scale": "y",
+            "field": "measure_value"
+          },
+          "text": {
+            "field": "dimension_value"
+          },
+          "align": {
+            "value": "left"
+          },
+          "baseline": {
+            "value": "middle"
+          },
+          "fill": {
+            "signal": "labelColor"
+          },
+          "ellipsis": {
+            "value": "..."
+          },
+          "tooltip": {
+            "field": "tooltip_text"
+          }
+        },
+        "update": {
+          "x": {
+            "scale": "x",
+            "field": "dimension_name",
+            "band": 0.5,
+            "offset": { "value": 18 }
+          },
+          "y": {
+            "scale": "y",
+            "field": "measure_value"
+          },
+          "text": {
+            "field": "dimension_value"
+          },
+          "fontSize": {
+            "value": 11
+          },
+          "limit": {
+            "signal": "max(24, bandwidth('x') * 0.9 - 24)"
+          }
+        }
+      }
+    }
+  ],
+
+  "config": {
+    "view": {
+      "stroke": null
+    }
+  }
+}
